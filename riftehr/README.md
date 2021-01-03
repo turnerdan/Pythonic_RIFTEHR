@@ -3,7 +3,9 @@
 Relationship Inference From The EHR (RIFTEHR) is an automated algorithm for identifying relatedness between patients in an institution's Electronic Health Records.
 
 Authors:
+
 Original Version: Fernanda Polubriaginof and Nicholas Tatonetti
+
 This Version: Farhad Ghamsari
 
 http://riftehr.tatonettilab.org
