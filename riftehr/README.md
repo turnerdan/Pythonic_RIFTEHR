@@ -33,4 +33,9 @@ EC_Relationship refers to the relationship between Patient and EC. (If EC_Relati
 - Go to Step 0 > `preprocess.py` > `process_phones()`:
     - Remove any additional phone numbers that are recurrent in your data set. For example, our team had to remove the Northwestern University main line as it was a common placeholder for emergency contact's phone numbers.
 - See `relation_map.csv`. The input_relation column contains emergency contact relationships as they appear in your dataset, and the output_relations column is what they should map to, as required by the RIFTEHR program.
-- In Step 1 > `match_in_batches.py` > `find_matches()` I felt that searching by a single data element for a possible match was too nonspecific, and opted to leave it commented out. You may experiment with it by uncommenting the section.  
+- In Step 1 > `match_in_batches.py` > `find_matches()` I felt that searching by a single data element for a possible match was too nonspecific, and opted to leave it commented out. You may experiment with it by uncommenting the section.
+
+## Contact
+Should you have any questions, comments, suggestions, please don't hesitate to reach out:
+
+fghamsari@tulane.edu  
