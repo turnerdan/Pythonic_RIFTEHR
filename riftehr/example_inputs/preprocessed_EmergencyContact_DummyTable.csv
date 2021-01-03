@@ -1,0 +1,16 @@
+MRN_1,EC_FirstName,EC_LastName,EC_PhoneNumber,EC_Zipcode,EC_Relationship
+1112223,a,xxx,1112223333,10032,child
+1234567,bob,smith,2411112222,10032,parent
+1256483,kitty,bennet,7083832648,60005,sibling
+1256483,mary,bennet,7083531234,60005,sibling
+1256483,charles,bingley,3122086579,60005,
+1256483,fitzwilliam,darcy,3122186123,60005,
+2345678,mary,jones,8572223333,43210,parent
+3456789,alice,teich,4193334444,72170,parent
+8053176,charles,bingley,3122086579,60005,sibling
+9532157,jo,march,8472532251,21036,sibling
+9532157,margaret,march,8475261954,21036,parent
+9532158,amy,march,8472556497,21036,child
+9532158,beth,march,8472536669,21036,child
+9532158,jo,march,8472532251,21036,child
+9532158,meg,march,8473126459,21036,child

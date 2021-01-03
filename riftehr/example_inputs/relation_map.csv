@@ -1,0 +1,15 @@
+input_relation,output_relation
+Spouse,spouse
+Mother,parent
+Father,parent
+Child,child
+Daughter,child
+Son,child
+Sibling,sibling
+Sister,sibling
+Brother,sibling
+Grandparent,grandparent
+Grandchild,grandchild
+Aunt/Uncle,aunt/uncle
+Nephew/Niece,nephew/niece
+Relative,relative
