@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from __main__ import * # DT
 
 import numpy as np
 import pandas as pd
@@ -8,6 +9,8 @@ import pandas as pd
 # For the purposes of this project, you should always read_csv's with `dtype=str`
 # This is to avoid pandas trying to interpret mrn's as int dtypes, which while more efficient, will complicate some scripts
 
+# DT added Age, Sex
+
 def preprocess(pt_fp, ec_fp, relmap_fp):
 
     # Collect paths for later use
@@ -15,18 +18,42 @@ def preprocess(pt_fp, ec_fp, relmap_fp):
     pt_file_name, file_ext = os.path.splitext(pt_file_name)
     file_dir, ec_file_name = os.path.split(ec_fp)
     ec_file_name, file_ext = os.path.splitext(ec_file_name)
+    
+    # LOADING DATA
+    
+    # PATIENT DATA
 
     # Read in Pt Demographic Data, Confirm it appears as expected, sort by MRN
     pt_df = pd.read_csv(pt_fp, dtype=str).replace(np.nan, '') # Here's a Nana
-    exp_header_pt = ['MRN', 'FirstName', 'LastName', 'PhoneNumber', 'Zipcode']
+    exp_header_pt = ['MRN', 'FirstName', 'LastName', 'PhoneNumber', 'Zipcode', 'Age', 'Sex'] # expected header for pt data 
+    
+    # Prepare PT data
+    pt_df.drop(pt_df.columns[[0,1]], axis=1, inplace=True) # Drop blank cols (specific to this dataset)
+    pt_df = pt_df.rename(columns={"age": "Age", "Sex": "Sex"}) # DT change colnames if needed (specific to this dataset)
+
+    # Check the header is as expected
     assert (pt_df.columns == exp_header_pt).all(), "Patient demographic data file (%s) doesn't have the header expected: %s" % (pt_fp, exp_header_pt)
     pt_df = pt_df.sort_values(by="MRN", ascending=True)
 
+    # EMERGENCY CONTACT DATA
     # Read in EC Data, Confirm it appears as expected, sort by MRN
     ec_df = pd.read_csv(ec_fp, dtype=str).replace(np.nan, '') # another Nana
-    exp_header_ec = ['MRN_1', 'EC_FirstName', 'EC_LastName', 'EC_PhoneNumber', 'EC_Zipcode', 'EC_Relationship']
+    
+    ec_df.drop(ec_df.columns[[0]], axis=1, inplace=True) # Drop blank cols (specific to this dataset)
+
+    # Fixing the file colnames
+    ec_df = ec_df.rename(columns={"age_x": "Age", "Sex_x": "Sex"}) # DT change colnames if needed (specific to this dataset)
+
+    exp_header_ec = ['MRN_1', 'EC_LastName', 'EC_FirstName', 'EC_PhoneNumber', 'EC_Zipcode', 'EC_Relationship', 'Age', 'Sex']
+
+    # Same as above^
     assert (ec_df.columns == exp_header_ec).all(), "Emergency contact data file (%s) doesn't have the header expected: %s" % (ec_fp, exp_header_ec)
+
     ec_df = ec_df.sort_values(by="MRN_1", ascending=True)
+    
+    
+    
+    # PREPROCESSING
 
     # Pre-process first name columns
     print("Pre-processing First and Last Name columns")
@@ -46,6 +73,8 @@ def preprocess(pt_fp, ec_fp, relmap_fp):
     print("Pre-processing Zip Codes")
     pt_df.Zipcode = process_zips(pt_df.Zipcode)
     ec_df.EC_Zipcode = process_zips(ec_df.EC_Zipcode)
+    
+    print("samp3\n", ec_df.head() ) #testing
 
     # Pre-process the Relationships in ec_df
     print("Pre-processing EC Relationships")
@@ -58,43 +87,48 @@ def preprocess(pt_fp, ec_fp, relmap_fp):
     ## pt_df first
     pt_df = pt_df.join(pt_df['FirstName'].str.split("-", expand=True), how="left")
     pt_df = pt_df.drop(columns="FirstName")
-    pt_df = pt_df.melt(id_vars=['MRN', 'LastName', 'PhoneNumber', 'Zipcode'])
+    pt_df = pt_df.melt(id_vars=['MRN', 'LastName', 'PhoneNumber', 'Zipcode', 'Age', 'Sex'])
     pt_df = pt_df.dropna(subset=["value"])
     pt_df = pt_df.rename(columns={'value':'FirstName'})
-    pt_df = pt_df[['MRN', 'FirstName', 'LastName', 'PhoneNumber', 'Zipcode']]
+    pt_df = pt_df[['MRN', 'FirstName', 'LastName', 'PhoneNumber', 'Zipcode', 'Age', 'Sex']]
 
     pt_df = pt_df.join(pt_df['LastName'].str.split("-", expand=True), how="left")
     pt_df = pt_df.drop(columns="LastName")
-    pt_df = pt_df.melt(id_vars=['MRN', 'FirstName', 'PhoneNumber', 'Zipcode'])
+    pt_df = pt_df.melt(id_vars=['MRN', 'FirstName', 'PhoneNumber', 'Zipcode', 'Age', 'Sex'])
     pt_df = pt_df.dropna(subset=["value"])
     pt_df = pt_df.rename(columns={'value': 'LastName'})
-    pt_df = pt_df[['MRN', 'FirstName', 'LastName', 'PhoneNumber', 'Zipcode']]
-    pt_df = pt_df.sort_values(by=['MRN', 'LastName', 'FirstName', 'PhoneNumber', 'Zipcode'])
+    pt_df = pt_df[['MRN', 'FirstName', 'LastName', 'PhoneNumber', 'Zipcode', 'Age', 'Sex']]
+    pt_df = pt_df.sort_values(by=['MRN', 'LastName', 'FirstName', 'PhoneNumber', 'Zipcode', 'Age', 'Sex'])
 
 
     ## ec_df second
     print("EC DF Name splitting")
     ec_df = ec_df.join(ec_df['EC_FirstName'].str.split("-", expand=True), how="left")
     ec_df = ec_df.drop(columns="EC_FirstName")
-    ec_df = ec_df.melt(id_vars=['MRN_1', 'EC_LastName', 'EC_PhoneNumber', 'EC_Zipcode', 'EC_Relationship'])
+    ec_df = ec_df.melt(id_vars=['MRN_1', 'EC_LastName', 'EC_PhoneNumber', 'EC_Zipcode', 'EC_Relationship', 'Age', 'Sex'])
     ec_df = ec_df.dropna(subset=["value"])
     ec_df = ec_df.rename(columns={'value': 'EC_FirstName'})
-    ec_df = ec_df[['MRN_1', 'EC_FirstName', 'EC_LastName', 'EC_PhoneNumber', 'EC_Zipcode', 'EC_Relationship']]
+    ec_df = ec_df[['MRN_1', 'EC_FirstName', 'EC_LastName', 'EC_PhoneNumber', 'EC_Zipcode', 'EC_Relationship', 'Age', 'Sex']]
 
     ec_df = ec_df.join(ec_df['EC_LastName'].str.split("-", expand=True), how="left")
     ec_df = ec_df.drop(columns="EC_LastName")
-    ec_df = ec_df.melt(id_vars=['MRN_1', 'EC_FirstName', 'EC_PhoneNumber', 'EC_Zipcode', 'EC_Relationship'])
+    ec_df = ec_df.melt(id_vars=['MRN_1', 'EC_FirstName', 'EC_PhoneNumber', 'EC_Zipcode', 'EC_Relationship', 'Age', 'Sex'])
     ec_df = ec_df.dropna(subset=["value"])
     ec_df = ec_df.rename(columns={'value': 'EC_LastName'})
-    ec_df = ec_df[['MRN_1', 'EC_FirstName', 'EC_LastName', 'EC_PhoneNumber', 'EC_Zipcode', 'EC_Relationship']]
-    ec_df = ec_df.sort_values(by=['MRN_1', 'EC_LastName', 'EC_FirstName', 'EC_PhoneNumber', 'EC_Zipcode', 'EC_Relationship'])
+    ec_df = ec_df[['MRN_1', 'EC_FirstName', 'EC_LastName', 'EC_PhoneNumber', 'EC_Zipcode', 'EC_Relationship', 'Age', 'Sex']]
+    ec_df = ec_df.sort_values(by=['MRN_1', 'EC_LastName', 'EC_FirstName', 'EC_PhoneNumber', 'EC_Zipcode', 'EC_Relationship', 'Age', 'Sex'])
 
-    # Write out the results to inputs/Preprocessed
-    print("Writing out pre-processing results")
+    # New paths
     new_pt_file_path = Path(Path(file_dir) / ("preprocessed_" + pt_file_name + ".csv"))
     new_ec_file_path = Path(Path(file_dir) / ("preprocessed_" + ec_file_name + ".csv"))
-    pt_df.to_csv(new_pt_file_path, index=False)
-    ec_df.to_csv(new_ec_file_path, index=False)
+
+    # Write out the results to inputs/Preprocessed
+    if not skip_writing:
+        print("Writing out pre-processing results")
+        pt_df.to_csv(new_pt_file_path, index=False)
+        ec_df.to_csv(new_ec_file_path, index=False)
+    else:
+        print("Skipping writing results")
 
     return new_pt_file_path, new_ec_file_path
 
