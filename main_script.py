@@ -1,26 +1,25 @@
-"""
-Central script to run RIFTEHR program.
+# Central script to run RIFTEHR program.
+# 
+# USAGE:
+#   -----
+#   From Command Line:
+#   python main_script.py <Absolute Path to Inputs Folder> <Patient_Demographics_Table_Name.csv> <Emergency_Contact_Table_Name.csv> <relation_map.csv> (--skip_preprocessing)
+# 
+# Optional Parameters:
+#   --skip_preprocessing - If you have already preprocessed and would like to save time, you may set this field.
+# You can then give paths to the preprocessed files instead when you call the script.
+# 
+# For example:
+#   python "C:\Users\research user\input folder\" All_Patients.csv Emergency_Contacts.csv relation_map.csv
+# 
+# You may also define the default paths and variables below, and simply run the program as:
+#     python main_script.py
+# 
+# AUTHORS:
+# -------
+# Original Version: Fernanda Polubriaginof and Nicholas Tatonetti
+# This Version: Farhad Ghamsari
 
-USAGE:
------
-From Command Line:
-    python main_script.py <Absolute Path to Inputs Folder> <Patient_Demographics_Table_Name.csv> <Emergency_Contact_Table_Name.csv> <relation_map.csv> (--skip_preprocessing)
-
-    Optional Parameters:
-    --skip_preprocessing - If you have already preprocessed and would like to save time, you may set this field.
-        You can then give paths to the preprocessed files instead when you call the script.
-
-    For example:
-        python "C:\Users\research user\input folder\" All_Patients.csv Emergency_Contacts.csv relation_map.csv
-
-You may also define the default paths and variables below, and simply run the program as:
-    python main_script.py
-
-AUTHORS:
--------
-Original Version: Fernanda Polubriaginof and Nicholas Tatonetti
-This Version: Farhad Ghamsari
-"""
 
 import os
 import sys
@@ -32,25 +31,30 @@ from pathlib import Path  # Aiming for cross Windows/Mac/Linux compatibility: we
 # Default Paths: These paths will be used if running from command line without supplied arguments, or if running main_script.py from within an IDE
 # main_inputs_path contains your input_files and also serves as the output folder
 # This folder can be separate from the folder which contains your code
-main_inputs_path = Path("C:/input_tmp_100k")
+main_inputs_path = Path("/Volumes/fsmresfiles/PrevMed/Projects/Family_Linkage")
 
 # Paths to the input files themselves
-patients_file_path = Path(main_inputs_path / "AllPatients_TableFinal.csv")
-emergency_contacts_file_path = Path(main_inputs_path / "EmergencyContact_TableFinal.csv")
+patients_file_path = Path(main_inputs_path / "To_useAllPatients_TableFinal_withConflicts.csv")
+emergency_contacts_file_path = Path(main_inputs_path / "To_useEmergencyContact_TableFinal_withConflicts.csv")
 relation_map_file_path = Path(main_inputs_path / "relation_map.csv")
 
+# Path to file with MRS and age columns DT
+age_file_path = Path(main_inputs_path / "matched_mrn_age_final.csv") 
+
 # Path to preprocessed files: If you have set the skip_preprocessing flag below to True, then ensure these paths are correct
-preprocessed_pt_fp = Path(main_inputs_path / "preprocessed_AllPatients_TableFinal.csv")
-preprocessed_ec_fp = Path(main_inputs_path / "preprocessed_EmergencyContact_TableFinal.csv")
+preprocessed_pt_fp = Path(main_inputs_path / "preprocessed_To_useAllPatients_TableFinal_withConflicts.csv")
+preprocessed_ec_fp = Path(main_inputs_path / "preprocessed_To_useEmergencyContact_TableFinal_withConflicts.csv")
 
 # Flags
-skip_preprocessing = False # Set this flag if you have already preprocessed once and would like to save some time
+skip_preprocessing = True # Set this flag if you have already preprocessed once and would like to save some time
 encrypt_first = False # Encryption is not currently implemented
 skip_hashing = False # Not currently implemented
 debugging = False # Not currently implemented
+skip_writing = False # Set this flag True if you don't want to write any data (for testing purposes)
 
-pt_df = pd.DataFrame()
-ec_df = pd.DataFrame()
+pt_df = pd.DataFrame()        # container for patient data
+ec_df = pd.DataFrame()        # container for emergency contact data
+id_conflicts = pd.DataFrame() # container for conflicting relationships
 
 def the_work():
     global preprocessed_pt_fp
@@ -61,16 +65,16 @@ def the_work():
 
     import Step0_PreProcessing.preprocess as PreProcessor
     # Pre-process the dataframes - See script for steps.
-    if not skip_preprocessing:
+    if not skip_writing and not skip_preprocessing: # paths not created if skip_writing is True
         preprocessed_pt_fp, preprocessed_ec_fp = PreProcessor.preprocess(patients_file_path, emergency_contacts_file_path, relation_map_file_path)
 
     # Todo: If ever you implement encryption, this is where it will go
     time_step1 = time.time()
     print("Time Taken for Step 0: ", time_step1 - time_step0)
-
+    
     # Begin Step 1 - Identify matches across the patient and emergency_contact dataframes; Output goes to matched_table.csv
     from Step1_MatchECtoDemog.match_in_batches import BatchMatcher
-    match_df = BatchMatcher(main_inputs_path, preprocessed_pt_fp, preprocessed_ec_fp, skip_hashing).run()
+    match_df = BatchMatcher(main_inputs_path, preprocessed_pt_fp, preprocessed_ec_fp, id_conflicts = None, skip_hashing = skip_hashing).run() # Pass #1
 
     time_step2 = time.time()
     print("Time Taken for Step 1: ", time_step2 - time_step1)
@@ -84,14 +88,45 @@ def the_work():
 
     # Begin Step 3 - Identify Relationships in Conflict
     import Step3_ConflictingRelationships.conflicts as conflicts
-    inferred_with_conflicts = conflicts.find_conflicts(inferred_df, main_inputs_path)
+    
+    # 3.1 find_conflicts()
+    process_match = conflicts.find_conflicts(inferred_df, main_inputs_path)
 
+    # 3.2 process_age() over matches + conflicts
+    process_match = conflicts.process_age(process_match, main_inputs_path)
+
+    # 3.3 rematch conflicts by breaking those connections and rebatching
+    rematch_df = BatchMatcher(main_inputs_path, preprocessed_pt_fp, preprocessed_ec_fp, id_conflicts = process_match, skip_hashing = skip_hashing).run() # Pass #1
+    rematch_df = Infer_relationships.infer_relationships(rematch_df, main_inputs_path)
+    
+    # 3.4 process the rematch dataset for conflicts
+    process_rematch = conflicts.find_conflicts(rematch_df, main_inputs_path)
+    process_rematch = conflicts.process_age(process_rematch, main_inputs_path)
+    
+    # 3.5 merge clean relationships from pass 1 and 2
+    clean_pass_1 = process_match.loc[(process_match['conflict'] == 0) & pd.isnull(process_match['age_conflict']) ]
+    clean_pass_2 = process_rematch.loc[(process_rematch['conflict'] == 0) & pd.isnull(process_rematch['age_conflict']) ]
+    no_conflicts = clean_pass_1.merge(clean_pass_2, how='outer')
+    no_filter = process_match.merge(process_rematch, how='outer')
+    
+    # 3.6 output a high confidence dataset with only age-validated relationships
+    confident = no_conflicts.loc[~pd.isnull(no_conflicts['age_diff'])] # only take non-zero age differences
+    confident.to_csv( Path(main_inputs_path / ("high_confidence_matches.csv")), index=False)
+    
+    # TESTING SECTION
+    process_match.to_csv( Path(main_inputs_path / ("dt_process_match_out.csv")), index=False)
+    process_rematch.to_csv( Path(main_inputs_path / ("dt_process_rematch_df_out.csv")), index=False)
+    clean_pass_1.to_csv( Path(main_inputs_path / ("dt_clean_pass_1_out.csv")), index=False)
+    clean_pass_2.to_csv( Path(main_inputs_path / ("dt_clean_pass_2_out.csv")), index=False)
+    no_conflicts.to_csv( Path(main_inputs_path / ("dt_no_conflicts_out.csv")), index=False)
+    no_filter.to_csv( Path(main_inputs_path / ("dt_no_filter_out.csv")), index=False)
+ 
     time_step4 = time.time()
     print("Time Taken for Step 3: ", time_step4 - time_step3)
 
     # Begin Step 4 - Establish Family linkage
     import Step4_AssignFamilyIDs.family_linkage as FamilyLinkage
-    families_fn = FamilyLinkage.familyLinkage(inferred_with_conflicts, main_inputs_path)
+    families_fn = FamilyLinkage.familyLinkage(no_conflicts, main_inputs_path)
 
     time_step5 = time.time()
     print("Time Taken for Step 4: ", time_step5 - time_step4)

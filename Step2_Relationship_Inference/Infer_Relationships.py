@@ -6,9 +6,9 @@ OUTPUT: `matched_table_inferred.csv` - A table of patients linked by relationshi
 
 from collections import defaultdict
 from pathlib import Path
+from __main__ import * # DT
 
 import pandas as pd
-
 
 def tuple_contains(test_relationship, test_mrn, pair_to_compare):
     test_relationship: str
@@ -289,9 +289,12 @@ def infer_relationships(input_df, main_inputs_path):
 
     L = [(k, *t) for k, v in matches_dict.items() for t in v]
     df = pd.DataFrame(L, columns=['pt_mrn','ec_relation','matched_mrn', 'inferred'])
-
-    output_fn = Path(main_inputs_path / ("matched_inferred.csv"))
-    df.to_csv(output_fn, index=False)
+    
+    if not skip_writing:
+        # DT: only relevant for the current itteration. to test output, you should join the different itterations first. 
+        # output_fn = Path(main_inputs_path / ("matched_inferred.csv"))
+        # df.to_csv(output_fn, index=False)
+        pass
 
     return df
 

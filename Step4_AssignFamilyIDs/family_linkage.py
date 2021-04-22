@@ -9,6 +9,7 @@ from pathlib import Path
 
 import networkx as nx
 import pandas as pd
+from __main__ import * # DT
 
 # Todo: Clean up this function, Inefficient as written
 def familyLinkage(input_df, main_inputs_path):
@@ -45,9 +46,11 @@ def familyLinkage(input_df, main_inputs_path):
 
 
     output_fn = Path(main_inputs_path / "familyLinkage.csv")
-
+    
     df = pd.DataFrame(data, columns=['family_id', 'individual_id'])
-    df.to_csv(output_fn, index=False)
+
+    if not skip_writing:
+        df.to_csv(output_fn, index=False)
 
     # Now reconnect familyIDs and place them in the inferred_relationships file
     df = df.set_index('individual_id').sort_index()
@@ -60,6 +63,7 @@ def familyLinkage(input_df, main_inputs_path):
     else:
         assert input_df.pt_fam_id.equals(input_df.match_fam_id), "Critical Error: There is a patient and Matched MRN who were assigned different families."
 
-    input_df.to_csv(main_inputs_path / "final_matches_and_families.csv", index=False)
+    if not skip_writing:
+        input_df.to_csv(main_inputs_path / "final_matches_and_families.csv", index=False)
 
     return output_fn

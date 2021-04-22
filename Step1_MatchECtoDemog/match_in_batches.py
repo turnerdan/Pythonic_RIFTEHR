@@ -1,5 +1,5 @@
 """
-INPUT: Paths to Preprocessed Patient Demographics (Pt) and Emergency Contact (EC) Tables
+INPUT: Paths to Preprocessed Patient Demographics (Pt) and Emergency Contact (EC) Tables, no_conflict_df is match_df minus conflicts
 PURPOSE: This script iterates through the EC table, searching the Pt table for patients who meet the description of the Emergency Contact.
     In other words, looks for ECs who are also Patients.
 OUTPUT: `matched.csv` - A table of Patients linked by a relationship.
@@ -7,22 +7,56 @@ OUTPUT: `matched.csv` - A table of Patients linked by a relationship.
 
 from collections import defaultdict
 from pathlib import Path
+from __main__ import * # DT
 
 import pandas as pd
 
+
 class BatchMatcher:
-    def __init__(self, main_input_path, input_preprocessed_pt_fp, input_preprocessed_ec_fp, skip_hashing=False):
+    def __init__(self, main_input_path, input_preprocessed_pt_fp, input_preprocessed_ec_fp, id_conflicts = None, skip_hashing=False):
         self.main_input_path = main_input_path
         self.input_pt_fp = input_preprocessed_pt_fp
         self.input_ec_fp = input_preprocessed_ec_fp
         self.skip_hashing = skip_hashing
+        self.skip_writing = skip_writing # DT
+        self.id_conflicts = id_conflicts # DT
 
     def run(self):
+        
+        # DT: This section has some redundant checks for the preprocessed data that I've commented out.
+        
+        # Load the data
+        # Data columns that we expect
+        #pt_cols = ['MRN', 'FirstName', 'LastName', 'PhoneNumber', 'Zipcode', 'Age', 'Sex']
+        #ec_cols = ['MRN_1', 'EC_LastName', 'EC_FirstName', 'EC_PhoneNumber', 'EC_Zipcode', 'EC_Relationship', 'Age', 'Sex'] # age and sex not used for matching, so no need to prefix it
+        
+        # Prepare the PT data
+        pt_df = pd.read_csv(self.input_pt_fp, dtype=str) # Read the data file
+        #pt_df.drop(~columns.isin(pt_cols))       # Drop columns we aren't expecting
+        
+        ec_df = pd.read_csv(self.input_ec_fp, dtype=str)  # Read the data file
+        #ec_df.drop(~columns.isin(ec_cols))        # Drop columns we aren't expecting
+        
 
-        pt_df = pd.read_csv(self.input_pt_fp, dtype=str)
-        assert (pt_df.columns == ['MRN', 'FirstName', 'LastName', 'PhoneNumber', 'Zipcode']).all(), "Step 1: The input Patient Dataframe has column names that are unexpected or out of order."
-        ec_df = pd.read_csv(self.input_ec_fp, dtype=str)
-        assert (ec_df.columns == ['MRN_1', 'EC_FirstName', 'EC_LastName', 'EC_PhoneNumber', 'EC_Zipcode', 'EC_Relationship']).all(), "Step 1: The input Emergency Contact Dataframe has column names that are unexpected or out of order."
+        # Check that the input is as expected
+        #assert (pt_df.columns == pt_cols).all(), "Step 1: The input Patient Dataframe has column names that are unexpected or out of order."
+        #assert (ec_df.columns == ec_cols).all(), "Step 1: The input Emergency Contact Dataframe has column names that are unexpected or out of order." #DT
+
+
+        # If there's a df that identifies conflicts, run the filter
+        if self.id_conflicts is not None:
+         
+            # Identify MRNs of matches
+            prematched = self.id_conflicts.loc[~(self.id_conflicts['age_conflict'] > 1) | ~(self.id_conflicts['conflict'] > 1)] # filter out conflicts
+            
+            prematched = prematched['pt_mrn'].tolist() + prematched['matched_mrn'].tolist() # set of unique mrns that are matched
+            prematched = [str(x) for x in prematched] # convert the list of ints to a list of strs
+            print("Removing ", len(prematched), " prematched MRNs.")
+
+            # Filter out those matched MRNs
+            pt_df = pt_df[~pt_df['MRN'].isin(prematched)]
+            ec_df = ec_df[~ec_df['MRN_1'].isin(prematched)]
+            
 
         # Hashes are a much faster for searching.
         # Each hashmap/dictionary represents a way of accessing a whole patient record using just one identifier:
@@ -62,7 +96,11 @@ class BatchMatcher:
         matches_df = matches_df[matches_df['matched_mrn'] != ""]
         matches_df = matches_df.dropna(how='any', subset=['ec_relation', 'matched_mrn'])
         matches_df = matches_df.drop_duplicates(keep='first')
-        matches_df.to_csv(Path(self.main_input_path / 'matched.csv'), index=False)
+        
+        if not skip_writing:
+            # matches_df.to_csv(Path(self.main_input_path / 'matched.csv'), index=False) # DT: only relevant for the current itteration. to test output, you should join the different itterations first. 
+            pass
+            
         return matches_df
 
 # This function vectorizes the matching process, running a whole column of matches at a time.
