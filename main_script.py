@@ -25,6 +25,7 @@ import os
 import sys
 import time
 import pandas as pd
+import numpy as np
 from pathlib import Path  # Aiming for cross Windows/Mac/Linux compatibility: we will use Python 3's pathlib for all paths
 
 
@@ -34,9 +35,11 @@ from pathlib import Path  # Aiming for cross Windows/Mac/Linux compatibility: we
 main_inputs_path = Path("/Volumes/fsmresfiles/PrevMed/Projects/Family_Linkage")
 
 # Paths to the input files themselves
-patients_file_path = Path(main_inputs_path / "To_useAllPatients_TableFinal_withConflicts.csv")
-emergency_contacts_file_path = Path(main_inputs_path / "To_useEmergencyContact_TableFinal_withConflicts.csv")
+patients_file_path = Path(main_inputs_path / "100K SAMPLE/100k_patientsample.csv")
+emergency_contacts_file_path = Path(main_inputs_path / "100K SAMPLE/100k_emergencycontactsample.csv")
 relation_map_file_path = Path(main_inputs_path / "relation_map.csv")
+#mother_baby_path = Path(main_inputs_path / "mom_baby_MRNS.csv")
+gender_path = Path(main_inputs_path / "pt_mrn_gender_final.csv")
 
 # Path to file with MRS and age columns DT
 age_file_path = Path(main_inputs_path / "matched_mrn_age_final.csv") 
@@ -113,6 +116,22 @@ def the_work():
     confident = no_conflicts.loc[~pd.isnull(no_conflicts['age_diff'])] # only take non-zero age differences
     confident.to_csv( Path(main_inputs_path / ("high_confidence_matches.csv")), index=False)
     
+    time_step4 = time.time()
+    print("Time Taken for Step 3: ", time_step4 - time_step3)
+
+    # Begin Step 4 - Establish Family linkage
+    
+    # 4.1 Add Sex TODO: extract sex from PT input rather than the dedicated file
+    gender_df = pd.read_csv(gender_path, dtype=str, index_col=[0]).replace(np.nan, '') # load gender data    
+    gender_df = gender_df.rename(columns={"MRN" : "pt_mrn"}) # change the colname to drop the redundant col on merge
+    no_conflicts = no_conflicts.merge(gender_df, on = "pt_mrn", how ='left') # add Sex 
+   
+    # 4.2 Add specific_relationship
+    no_conflicts['specific_relationship'] = '' # new field
+    no_conflicts['specific_relationship'] = np.where((no_conflicts.ec_relation == 'parent' ) & (no_conflicts.Sex == 'Female' ), 'mother', no_conflicts['ec_relation']) # flag mothers
+    no_conflicts['specific_relationship'] = np.where((no_conflicts.ec_relation == 'parent' ) & (no_conflicts.Sex == 'Male' ), 'father', no_conflicts['specific_relationship']) # flag fathers
+    del no_conflicts['Sex'] # drop the col 
+ 
     # TESTING SECTION
     process_match.to_csv( Path(main_inputs_path / ("dt_process_match_out.csv")), index=False)
     process_rematch.to_csv( Path(main_inputs_path / ("dt_process_rematch_df_out.csv")), index=False)
@@ -120,11 +139,8 @@ def the_work():
     clean_pass_2.to_csv( Path(main_inputs_path / ("dt_clean_pass_2_out.csv")), index=False)
     no_conflicts.to_csv( Path(main_inputs_path / ("dt_no_conflicts_out.csv")), index=False)
     no_filter.to_csv( Path(main_inputs_path / ("dt_no_filter_out.csv")), index=False)
- 
-    time_step4 = time.time()
-    print("Time Taken for Step 3: ", time_step4 - time_step3)
-
-    # Begin Step 4 - Establish Family linkage
+    
+    # 4.3 Assign family IDs
     import Step4_AssignFamilyIDs.family_linkage as FamilyLinkage
     families_fn = FamilyLinkage.familyLinkage(no_conflicts, main_inputs_path)
 
@@ -177,3 +193,4 @@ if __name__ == '__main__':
             skip_preprocessing = False
 
     the_work()
+

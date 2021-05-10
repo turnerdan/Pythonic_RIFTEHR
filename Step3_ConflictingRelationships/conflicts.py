@@ -100,7 +100,7 @@ def process_age(inferred_df, main_inputs_path):
 
     # Define the groups we'll flip
     inferred_younger = ['child', 'grandchild', 'great-grandchild', 'great-great-grandchild']
-    inferred_older = ['parent', 'grandparent', 'great-grandparent', 'great-great-grandparent' ]
+    inferred_older = ['parent', 'grandparent', 'great-grandparent', 'great-great-grandparent']
 
     # Flag ec_relations so X-children are always younger (negative #) than their X-parent (positive #)
     df['age_flipped'] = False       # By default we do not flip any rows

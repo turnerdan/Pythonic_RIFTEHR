@@ -25,29 +25,28 @@ def preprocess(pt_fp, ec_fp, relmap_fp):
 
     # Read in Pt Demographic Data, Confirm it appears as expected, sort by MRN
     pt_df = pd.read_csv(pt_fp, dtype=str).replace(np.nan, '') # Here's a Nana
-    exp_header_pt = ['MRN', 'FirstName', 'LastName', 'PhoneNumber', 'Zipcode', 'Age', 'Sex'] # expected header for pt data 
+    exp_header_pt = ['MRN', 'FirstName', 'LastName', 'PhoneNumber', 'Zipcode', 'age', 'Sex'] # expected header for pt data 
     
     # Prepare PT data
-    pt_df.drop(pt_df.columns[[0,1]], axis=1, inplace=True) # Drop blank cols (specific to this dataset)
-    pt_df = pt_df.rename(columns={"age": "Age", "Sex": "Sex"}) # DT change colnames if needed (specific to this dataset)
+    # pt_df.drop(pt_df.columns[[0,1]], axis=1, inplace=True) # Drop blank cols (specific to this dataset)
+    pt_df = pt_df.rename(columns={"age": "Age"}) # DT change colnames if needed (specific to this dataset)
 
     # Check the header is as expected
-    assert (pt_df.columns == exp_header_pt).all(), "Patient demographic data file (%s) doesn't have the header expected: %s" % (pt_fp, exp_header_pt)
+    # assert (pt_df.columns == exp_header_pt).all(), "Patient demographic data file (%s) doesn't have the header expected: %s" % (pt_fp, exp_header_pt)
     pt_df = pt_df.sort_values(by="MRN", ascending=True)
 
     # EMERGENCY CONTACT DATA
     # Read in EC Data, Confirm it appears as expected, sort by MRN
     ec_df = pd.read_csv(ec_fp, dtype=str).replace(np.nan, '') # another Nana
-    
-    ec_df.drop(ec_df.columns[[0]], axis=1, inplace=True) # Drop blank cols (specific to this dataset)
 
     # Fixing the file colnames
-    ec_df = ec_df.rename(columns={"age_x": "Age", "Sex_x": "Sex"}) # DT change colnames if needed (specific to this dataset)
+    # ec_df.drop(ec_df.columns[[0]], axis=1, inplace=True) # Drop blank cols (specific to this dataset)
+    ec_df = ec_df.rename(columns={"age": "Age"}) # DT change colnames if needed (specific to this dataset)
 
-    exp_header_ec = ['MRN_1', 'EC_LastName', 'EC_FirstName', 'EC_PhoneNumber', 'EC_Zipcode', 'EC_Relationship', 'Age', 'Sex']
+    exp_header_ec = ['MRN_1', 'EC_LastName', 'EC_FirstName', 'EC_PhoneNumber', 'EC_Zipcode', 'EC_Relationship', 'age', 'Sex']
 
     # Same as above^
-    assert (ec_df.columns == exp_header_ec).all(), "Emergency contact data file (%s) doesn't have the header expected: %s" % (ec_fp, exp_header_ec)
+    # assert (ec_df.columns == exp_header_ec).all(), "Emergency contact data file (%s) doesn't have the header expected: %s" % (ec_fp, exp_header_ec)
 
     ec_df = ec_df.sort_values(by="MRN_1", ascending=True)
     
