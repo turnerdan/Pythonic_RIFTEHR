@@ -78,23 +78,28 @@ def process_age(inferred_df, main_inputs_path):
 
     df = inferred_df.copy()
 
-    # Read-in age data
-    age_df = pd.read_csv(age_file_path, dtype=str).replace(np.nan, '') # replace NAs
-    age_df.columns = ['row', 'pt_mrn', 'pt_age'] # first we set the colname for pt
+    demographics = pd.read_csv(patients_file_path, index_col=0).replace(np.nan, '') # read in the primary data to extract demographics
+    demographics.MRN.apply(str) # set the MRN of demographics to a string, like df. Age should be numeric and sex will automatically be considered a string
+    demographics = demographics[demographics.columns[demographics.columns.isin(['MRN', 'Sex', 'age'])]] # take mrn sex, and age from pt input as gender_df
+    pt_demographics = demographics.rename(columns={'MRN' : 'pt_mrn', 'age' : 'pt_age', 'Sex' : 'pt_sex'}) # change the colname to drop the key col on merge
+    ec_demographics = demographics.rename(columns={'MRN' : 'matched_mrn', 'age' : 'matched_age', 'Sex' : 'matched_sex'})
     
-    # Left join to add age for pt_mrn
-    df = df.merge(age_df, on='pt_mrn', how='left') # merge to match
-    
-    # Left join to add age for matched_mrn
-    age_df.columns = ['row', 'matched_mrn', 'matched_age'] # just for convenient merge
-    df = df.merge(age_df, on='matched_mrn', how='left')
-    
+    # Merge 
+    df = df.merge(pt_demographics, how ='left') # add pt_sex and pt_age
+    df = df.merge(ec_demographics, how ='left') # add matched_sex and matched_age
+
     # Calculate the difference
     df = df.apply(pd.to_numeric, errors='ignore') # convert strings to numerics to do math
     df["age_diff"] = df["pt_age"] - df["matched_age"]
     
+    # TESTING
+    print("testing in conflicts.py - df head", df.head())
+    print("testing in conflicts.py - demographics describe", demographics.describe())
+    #print("...")
+    #print("testing in conflicts.py -demo", demographics.head())
+    
     # Assign the calculated column to the incoming df, so original datatypes are preserved
-    df = inferred_df.assign(age_diff = df["age_diff"]) 
+    # df = inferred_df.assign(age_diff = df["age_diff"], pt_age = df["pt_age"], matched_age = df["matched_age"]) 
     
     # Flip pt_mrns and match_mrns for children-relative relationships so child is younger (fixes directionality errors)
 
@@ -133,9 +138,16 @@ def process_age(inferred_df, main_inputs_path):
     age_conflicts = pd.DataFrame().append([child_parent_conflicts, grandchild_grandparent_conflicts, great_grandchild_grandparent_conflicts, great_great_grandchild_grandparent_conflicts])
     
     # Add conflict flag value for all rejected matches
-    age_conflicts['age_conflict'] = 1
+    age_conflicts['age_conflict'] = int(1)
     
     # Transfer the flags to the main dataset, which now will have the above column 
     df = pd.merge(df, age_conflicts, how='left')
+    df['age_conflict'] = df['age_conflict'].fillna(0) # turn NA's to 0's for the new column
+    
+    # If no conflict, mark 0 (better than NaN)
+    df['age_conflict'] = df['age_conflict'].replace(np.nan, 0)
+    
+    # TESTING
+    # print(df.head())
 
     return df

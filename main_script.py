@@ -38,11 +38,11 @@ main_inputs_path = Path("/Volumes/fsmresfiles/PrevMed/Projects/Family_Linkage")
 patients_file_path = Path(main_inputs_path / "100K SAMPLE/100k_patientsample.csv")
 emergency_contacts_file_path = Path(main_inputs_path / "100K SAMPLE/100k_emergencycontactsample.csv")
 relation_map_file_path = Path(main_inputs_path / "relation_map.csv")
-#mother_baby_path = Path(main_inputs_path / "mom_baby_MRNS.csv")
-gender_path = Path(main_inputs_path / "pt_mrn_gender_final.csv")
+# mother_baby_path = Path(main_inputs_path / "mom_baby_MRNS.csv")
+# gender_path = Path(main_inputs_path / "pt_mrn_gender_final.csv")
 
 # Path to file with MRS and age columns DT
-age_file_path = Path(main_inputs_path / "matched_mrn_age_final.csv") 
+# age_file_path = Path(main_inputs_path / "matched_mrn_age_final.csv") 
 
 # Path to preprocessed files: If you have set the skip_preprocessing flag below to True, then ensure these paths are correct
 preprocessed_pt_fp = Path(main_inputs_path / "preprocessed_To_useAllPatients_TableFinal_withConflicts.csv")
@@ -107,30 +107,26 @@ def the_work():
     process_rematch = conflicts.process_age(process_rematch, main_inputs_path)
     
     # 3.5 merge clean relationships from pass 1 and 2
-    clean_pass_1 = process_match.loc[(process_match['conflict'] == 0) & pd.isnull(process_match['age_conflict']) ]
-    clean_pass_2 = process_rematch.loc[(process_rematch['conflict'] == 0) & pd.isnull(process_rematch['age_conflict']) ]
+    clean_pass_1 = process_match.loc[(process_match['conflict'] == 0) & (process_match['age_conflict'] == 0) ]
+    clean_pass_2 = process_rematch.loc[(process_rematch['conflict'] == 0) & (process_rematch['age_conflict'] == 0) ]
     no_conflicts = clean_pass_1.merge(clean_pass_2, how='outer')
     no_filter = process_match.merge(process_rematch, how='outer')
     
-    # 3.6 output a high confidence dataset with only age-validated relationships
+    # 3.6 create a high confidence dataset with only age-validated relationships
     confident = no_conflicts.loc[~pd.isnull(no_conflicts['age_diff'])] # only take non-zero age differences
-    confident.to_csv( Path(main_inputs_path / ("high_confidence_matches.csv")), index=False)
     
     time_step4 = time.time()
     print("Time Taken for Step 3: ", time_step4 - time_step3)
 
     # Begin Step 4 - Establish Family linkage
     
-    # 4.1 Add Sex TODO: extract sex from PT input rather than the dedicated file
-    gender_df = pd.read_csv(gender_path, dtype=str, index_col=[0]).replace(np.nan, '') # load gender data    
-    gender_df = gender_df.rename(columns={"MRN" : "pt_mrn"}) # change the colname to drop the redundant col on merge
-    no_conflicts = no_conflicts.merge(gender_df, on = "pt_mrn", how ='left') # add Sex 
-   
-    # 4.2 Add specific_relationship
+    # 4.1 Add specific_relationship
+    
     no_conflicts['specific_relationship'] = '' # new field
-    no_conflicts['specific_relationship'] = np.where((no_conflicts.ec_relation == 'parent' ) & (no_conflicts.Sex == 'Female' ), 'mother', no_conflicts['ec_relation']) # flag mothers
-    no_conflicts['specific_relationship'] = np.where((no_conflicts.ec_relation == 'parent' ) & (no_conflicts.Sex == 'Male' ), 'father', no_conflicts['specific_relationship']) # flag fathers
-    del no_conflicts['Sex'] # drop the col 
+    no_conflicts['specific_relationship'] = np.where((no_conflicts.ec_relation == 'parent' ) & (no_conflicts.pt_sex == 'F' ), 'mother', no_conflicts['ec_relation']) # flag mothers, else general relation
+    no_conflicts['specific_relationship'] = np.where((no_conflicts.ec_relation == 'parent' ) & (no_conflicts.pt_sex == 'M' ), 'father', no_conflicts['specific_relationship']) # flag fathers
+    
+
  
     # TESTING SECTION
     process_match.to_csv( Path(main_inputs_path / ("dt_process_match_out.csv")), index=False)
@@ -139,6 +135,7 @@ def the_work():
     clean_pass_2.to_csv( Path(main_inputs_path / ("dt_clean_pass_2_out.csv")), index=False)
     no_conflicts.to_csv( Path(main_inputs_path / ("dt_no_conflicts_out.csv")), index=False)
     no_filter.to_csv( Path(main_inputs_path / ("dt_no_filter_out.csv")), index=False)
+    confident.to_csv( Path(main_inputs_path / ("high_confidence_matches.csv")), index=False)
     
     # 4.3 Assign family IDs
     import Step4_AssignFamilyIDs.family_linkage as FamilyLinkage
