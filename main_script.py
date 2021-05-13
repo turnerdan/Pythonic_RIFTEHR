@@ -126,9 +126,7 @@ def the_work():
     no_conflicts['specific_relationship'] = np.where((no_conflicts.ec_relation == 'parent' ) & (no_conflicts.pt_sex == 'F' ), 'mother', no_conflicts['ec_relation']) # flag mothers, else general relation
     no_conflicts['specific_relationship'] = np.where((no_conflicts.ec_relation == 'parent' ) & (no_conflicts.pt_sex == 'M' ), 'father', no_conflicts['specific_relationship']) # flag fathers
     
-
- 
-    # TESTING SECTION
+    # 4.2 Check linkage inputs & check output of previous steps
     process_match.to_csv( Path(main_inputs_path / ("dt_process_match_out.csv")), index=False)
     process_rematch.to_csv( Path(main_inputs_path / ("dt_process_rematch_df_out.csv")), index=False)
     clean_pass_1.to_csv( Path(main_inputs_path / ("dt_clean_pass_1_out.csv")), index=False)
@@ -137,7 +135,7 @@ def the_work():
     no_filter.to_csv( Path(main_inputs_path / ("dt_no_filter_out.csv")), index=False)
     confident.to_csv( Path(main_inputs_path / ("high_confidence_matches.csv")), index=False)
     
-    # 4.3 Assign family IDs
+    # 4.2 Assign family IDs
     import Step4_AssignFamilyIDs.family_linkage as FamilyLinkage
     families_fn = FamilyLinkage.familyLinkage(no_conflicts, main_inputs_path)
 

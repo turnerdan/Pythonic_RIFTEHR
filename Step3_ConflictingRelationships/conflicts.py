@@ -8,7 +8,7 @@ OUTPUT: `matched_inferred_conflicts.csv`
 import pandas as pd
 import numpy as np
 from pathlib import Path
-from __main__ import * # DT
+from __main__ import *
 
 conflict_count = 0
 
@@ -71,7 +71,6 @@ def evaluate_group(df):
         return df
 
     
-    
 # Check whether children are younger than their parents
 # Marks those subsets that have conflicts, for further investigation
 def process_age(inferred_df, main_inputs_path):
@@ -91,16 +90,7 @@ def process_age(inferred_df, main_inputs_path):
     # Calculate the difference
     df = df.apply(pd.to_numeric, errors='ignore') # convert strings to numerics to do math
     df["age_diff"] = df["pt_age"] - df["matched_age"]
-    
-    # TESTING
-    print("testing in conflicts.py - df head", df.head())
-    print("testing in conflicts.py - demographics describe", demographics.describe())
-    #print("...")
-    #print("testing in conflicts.py -demo", demographics.head())
-    
-    # Assign the calculated column to the incoming df, so original datatypes are preserved
-    # df = inferred_df.assign(age_diff = df["age_diff"], pt_age = df["pt_age"], matched_age = df["matched_age"]) 
-    
+
     # Flip pt_mrns and match_mrns for children-relative relationships so child is younger (fixes directionality errors)
 
     # Define the groups we'll flip
@@ -146,8 +136,5 @@ def process_age(inferred_df, main_inputs_path):
     
     # If no conflict, mark 0 (better than NaN)
     df['age_conflict'] = df['age_conflict'].replace(np.nan, 0)
-    
-    # TESTING
-    # print(df.head())
 
     return df
