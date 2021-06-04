@@ -18,25 +18,22 @@ def find_conflicts(inferred_df, main_inputs_path):
  
     # For the conflicts to be properly identified, each pairing needs to be in the same order, so we flip MRNs temporarily
     df['flip'] = df.pt_mrn > df.matched_mrn
-    for ix in range(len(df)):
-        if df.loc[ix, 'flip']:
-            tmp = df.loc[ix, 'pt_mrn']
-            df.loc[ix, 'pt_mrn'] = df.loc[ix, 'matched_mrn']
-            df.loc[ix, 'matched_mrn'] = tmp
+            
+    # Flip pt_mrn and matched_mrn
+    df.loc[df['flip'], ['pt_mrn', 'matched_mrn']] = df.loc[df['flip'], ['matched_mrn', 'pt_mrn']].values
 
+    # Prepare flags for evaluate_group
     df['conflict'] = 0
     df['conflict_group'] = -1
 
+    # Evaluate groups
     grp = df.groupby(by=['pt_mrn', 'matched_mrn'])
     df = grp.apply(evaluate_group)
 
-    # Flip pairings back
-    for ix in range(len(df)):
-        if df.loc[ix, 'flip']:
-            tmp = df.loc[ix, 'pt_mrn']
-            df.loc[ix, 'pt_mrn'] = df.loc[ix, 'matched_mrn']
-            df.loc[ix, 'matched_mrn'] = tmp
-
+    # Flip pt_mrn and matched_mrn back
+    df.loc[df['flip'], ['pt_mrn', 'matched_mrn']] = df.loc[df['flip'], ['matched_mrn', 'pt_mrn']].values
+    
+    # Drop the flip column
     df = df.drop(columns=["flip"])
 
     return df
@@ -77,16 +74,16 @@ def process_age(inferred_df, main_inputs_path):
 
     df = inferred_df.copy()
 
-    demographics = pd.read_csv(patients_file_path, index_col=0).replace(np.nan, '') # read in the primary data to extract demographics
-    demographics.MRN.apply(str) # set the MRN of demographics to a string, like df. Age should be numeric and sex will automatically be considered a string
+    demographics = pd.read_csv(patients_file_path, dtype=str).replace(np.nan, '') # read in the primary data to extract demographics
+
     demographics = demographics[demographics.columns[demographics.columns.isin(['MRN', 'Sex', 'age'])]] # take mrn sex, and age from pt input as gender_df
     pt_demographics = demographics.rename(columns={'MRN' : 'pt_mrn', 'age' : 'pt_age', 'Sex' : 'pt_sex'}) # change the colname to drop the key col on merge
     ec_demographics = demographics.rename(columns={'MRN' : 'matched_mrn', 'age' : 'matched_age', 'Sex' : 'matched_sex'})
     
     # Merge 
-    df = df.merge(pt_demographics, how ='left') # add pt_sex and pt_age
-    df = df.merge(ec_demographics, how ='left') # add matched_sex and matched_age
-
+    df = df.merge(pt_demographics, how = 'left') # add pt_sex and pt_age
+    df = df.merge(ec_demographics, how = 'left') # add matched_sex and matched_age
+ 
     # Calculate the difference
     df = df.apply(pd.to_numeric, errors='ignore') # convert strings to numerics to do math
     df["age_diff"] = df["pt_age"] - df["matched_age"]

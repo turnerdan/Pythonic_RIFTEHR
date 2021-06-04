@@ -38,22 +38,17 @@ main_inputs_path = Path("/Volumes/fsmresfiles/PrevMed/Projects/Family_Linkage")
 patients_file_path = Path(main_inputs_path / "100K SAMPLE/100k_patientsample.csv")
 emergency_contacts_file_path = Path(main_inputs_path / "100K SAMPLE/100k_emergencycontactsample.csv")
 relation_map_file_path = Path(main_inputs_path / "relation_map.csv")
-# mother_baby_path = Path(main_inputs_path / "mom_baby_MRNS.csv")
-# gender_path = Path(main_inputs_path / "pt_mrn_gender_final.csv")
-
-# Path to file with MRS and age columns DT
-# age_file_path = Path(main_inputs_path / "matched_mrn_age_final.csv") 
 
 # Path to preprocessed files: If you have set the skip_preprocessing flag below to True, then ensure these paths are correct
 preprocessed_pt_fp = Path(main_inputs_path / "preprocessed_To_useAllPatients_TableFinal_withConflicts.csv")
 preprocessed_ec_fp = Path(main_inputs_path / "preprocessed_To_useEmergencyContact_TableFinal_withConflicts.csv")
 
 # Flags
-skip_preprocessing = True # Set this flag if you have already preprocessed once and would like to save some time
+skip_preprocessing = False # Set this flag if you have already preprocessed once and would like to save some time
 encrypt_first = False # Encryption is not currently implemented
 skip_hashing = False # Not currently implemented
 debugging = False # Not currently implemented
-skip_writing = False # Set this flag True if you don't want to write any data (for testing purposes)
+skip_writing = True # Set this flag True if you don't want to write any data (for testing purposes)
 
 pt_df = pd.DataFrame()        # container for patient data
 ec_df = pd.DataFrame()        # container for emergency contact data
@@ -94,29 +89,44 @@ def the_work():
     
     # 3.1 find_conflicts()
     process_match = conflicts.find_conflicts(inferred_df, main_inputs_path)
+    
+    time_step3_1 = time.time()
+    print("Time Taken for Step 3.1: ", time_step3_1 - time_step3)
 
     # 3.2 process_age() over matches + conflicts
     process_match = conflicts.process_age(process_match, main_inputs_path)
+    
+    time_step3_2 = time.time()
+    print("Time Taken for Step 3.2: ", time_step3_2 - time_step3_1)
 
     # 3.3 rematch conflicts by breaking those connections and rebatching
     rematch_df = BatchMatcher(main_inputs_path, preprocessed_pt_fp, preprocessed_ec_fp, id_conflicts = process_match, skip_hashing = skip_hashing).run() # Pass #1
     rematch_df = Infer_relationships.infer_relationships(rematch_df, main_inputs_path)
     
+    time_step3_3 = time.time()
+    print("Time Taken for Step 3.3: ", time_step3_3 - time_step3_2)
+    
     # 3.4 process the rematch dataset for conflicts
     process_rematch = conflicts.find_conflicts(rematch_df, main_inputs_path)
     process_rematch = conflicts.process_age(process_rematch, main_inputs_path)
+    
+    time_step3_4 = time.time()
+    print("Time Taken for Step 3.4: ", time_step3_4 - time_step3_3)
     
     # 3.5 merge clean relationships from pass 1 and 2
     clean_pass_1 = process_match.loc[(process_match['conflict'] == 0) & (process_match['age_conflict'] == 0) ]
     clean_pass_2 = process_rematch.loc[(process_rematch['conflict'] == 0) & (process_rematch['age_conflict'] == 0) ]
     no_conflicts = clean_pass_1.merge(clean_pass_2, how='outer')
-    no_filter = process_match.merge(process_rematch, how='outer')
+    #no_filter = process_match.merge(process_rematch, how='outer')
+    
+    time_step3_5 = time.time()
+    print("Time Taken for Step 3.5: ", time_step3_5 - time_step3_4)
     
     # 3.6 create a high confidence dataset with only age-validated relationships
     confident = no_conflicts.loc[~pd.isnull(no_conflicts['age_diff'])] # only take non-zero age differences
     
     time_step4 = time.time()
-    print("Time Taken for Step 3: ", time_step4 - time_step3)
+    print("Time Taken for Step 3 (Total): ", time_step4 - time_step3)
 
     # Begin Step 4 - Establish Family linkage
     
@@ -132,7 +142,7 @@ def the_work():
     clean_pass_1.to_csv( Path(main_inputs_path / ("dt_clean_pass_1_out.csv")), index=False)
     clean_pass_2.to_csv( Path(main_inputs_path / ("dt_clean_pass_2_out.csv")), index=False)
     no_conflicts.to_csv( Path(main_inputs_path / ("dt_no_conflicts_out.csv")), index=False)
-    no_filter.to_csv( Path(main_inputs_path / ("dt_no_filter_out.csv")), index=False)
+    #no_filter.to_csv( Path(main_inputs_path / ("dt_no_filter_out.csv")), index=False)
     confident.to_csv( Path(main_inputs_path / ("high_confidence_matches.csv")), index=False)
     
     # 4.2 Assign family IDs

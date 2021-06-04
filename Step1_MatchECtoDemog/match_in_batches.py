@@ -77,10 +77,10 @@ class BatchMatcher:
         ec_df.EC_Zipcode = ec_df.EC_Zipcode.map(zip_hash)
 
         # Remove each Patient MRN from their own hashmaps (ie their own row's hashmaps of Firstnames, Lastnames, etc)
-        ec_df.EC_FirstName = [b.difference(a) for a, b in zip(ec_df['MRN_1'].apply(lambda x: {x}), ec_df.EC_FirstName)]
-        ec_df.EC_LastName = [b.difference(a) for a, b in zip(ec_df['MRN_1'].apply(lambda x: {x}), ec_df.EC_LastName)]
-        ec_df.EC_PhoneNumber = [b.difference(a) for a, b in zip(ec_df['MRN_1'].apply(lambda x: {x}), ec_df.EC_PhoneNumber)]
-        ec_df.EC_Zipcode = [b.difference(a) for a, b in zip(ec_df['MRN_1'].apply(lambda x: {x}), ec_df.EC_Zipcode)]
+        #ec_df.EC_FirstName = [b.difference(a) for a, b in zip(ec_df['MRN_1'].apply(lambda x: {x}), ec_df.EC_FirstName)]
+        #ec_df.EC_LastName = [b.difference(a) for a, b in zip(ec_df['MRN_1'].apply(lambda x: {x}), ec_df.EC_LastName)]
+        #ec_df.EC_PhoneNumber = [b.difference(a) for a, b in zip(ec_df['MRN_1'].apply(lambda x: {x}), ec_df.EC_PhoneNumber)]
+        #ec_df.EC_Zipcode = [b.difference(a) for a, b in zip(ec_df['MRN_1'].apply(lambda x: {x}), ec_df.EC_Zipcode)]
 
         # Begin matching
         # Note: Originally planned to use parallel processing, however when I did so, my speed improvements were minimal.
