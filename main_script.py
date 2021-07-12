@@ -133,8 +133,8 @@ def the_work():
     # 4.1 Add specific_relationship
     
     no_conflicts['specific_relationship'] = '' # new field
-    no_conflicts['specific_relationship'] = np.where((no_conflicts.ec_relation == 'parent' ) & (no_conflicts.pt_sex == 'F' ), 'mother', no_conflicts['ec_relation']) # flag mothers, else general relation
-    no_conflicts['specific_relationship'] = np.where((no_conflicts.ec_relation == 'parent' ) & (no_conflicts.pt_sex == 'M' ), 'father', no_conflicts['specific_relationship']) # flag fathers
+    no_conflicts['specific_relationship'] = np.where((no_conflicts.ec_relation == 'parent' ) & (no_conflicts.matched_sex == 'F' ), 'mother', no_conflicts['ec_relation']) # flag mothers, else general relation
+    no_conflicts['specific_relationship'] = np.where((no_conflicts.ec_relation == 'parent' ) & (no_conflicts.matched_sex == 'M' ), 'father', no_conflicts['specific_relationship']) # flag fathers
     
     # 4.2 Check linkage inputs & check output of previous steps
     process_match.to_csv( Path(main_inputs_path / ("dt_process_match_out.csv")), index=False)

@@ -84,9 +84,19 @@ def process_age(inferred_df, main_inputs_path):
     df = df.merge(pt_demographics, how = 'left') # add pt_sex and pt_age
     df = df.merge(ec_demographics, how = 'left') # add matched_sex and matched_age
  
+    # Convert age cols form string to float
+    # convert_dict = {'pt_age':float,'matched_age':float} # convert from string to float
+    # df = df.astype(convert_dict)
+    
+    # df['pt_age'] = df['pt_age'].astype(float)
+    # df['matched_age'] = df['pt_age'].astype(float)
+    
+    # new 6-15-21 dt
+    df['pt_age'] = pd.to_numeric(df['pt_age'], errors='coerce')
+    df['matched_age'] = pd.to_numeric(df['matched_age'], errors='coerce')
+    
     # Calculate the difference
-    df = df.apply(pd.to_numeric, errors='ignore') # convert strings to numerics to do math
-    df["age_diff"] = df["pt_age"] - df["matched_age"]
+    df["age_diff"] = df["pt_age"] - df["matched_age"] # do the math
 
     # Flip pt_mrns and match_mrns for children-relative relationships so child is younger (fixes directionality errors)
 
