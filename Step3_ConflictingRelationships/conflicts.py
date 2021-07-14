@@ -67,6 +67,9 @@ def evaluate_group(df):
         df['conflict_group'] = conflict_count
         return df
 
+    # The patient and match should have different identifiers
+    df['conflict_count'] = np.where(df["pt_mrn"] == df["matched_mrn"], df["conflict_count"] + 1, df["conflict_count"])
+        
     
 # Check whether children are younger than their parents
 # Marks those subsets that have conflicts, for further investigation
@@ -131,8 +134,11 @@ def process_age(inferred_df, main_inputs_path):
     great_great_grandchild_grandparent_ec = ['great-great-grandchild', 'great-great-grandparent']
     great_great_grandchild_grandparent_conflicts = df.loc[df['ec_relation'].isin(great_great_grandchild_grandparent_ec) & df['age_diff'].between(-40, 40, inclusive = True)]
     
+    # spouse (flag < 17yr spouses)
+    spouse_conflicts = df.loc[df['ec_relation'].isin(['spouse']) & df['age_diff'].between(-17, 17, inclusive = True)]
+    
     # Join all the groups of conflicts that we identified
-    age_conflicts = pd.DataFrame().append([child_parent_conflicts, grandchild_grandparent_conflicts, great_grandchild_grandparent_conflicts, great_great_grandchild_grandparent_conflicts])
+    age_conflicts = pd.DataFrame().append([child_parent_conflicts, grandchild_grandparent_conflicts, great_grandchild_grandparent_conflicts, great_great_grandchild_grandparent_conflicts, spouse_conflicts])
     
     # Add conflict flag value for all rejected matches
     age_conflicts['age_conflict'] = int(1)
