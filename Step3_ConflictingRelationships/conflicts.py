@@ -135,7 +135,7 @@ def process_age(inferred_df, main_inputs_path):
     great_great_grandchild_grandparent_conflicts = df.loc[df['ec_relation'].isin(great_great_grandchild_grandparent_ec) & df['age_diff'].between(-40, 40, inclusive = True)]
     
     # spouse (flag < 17yr spouses)
-    spouse_conflicts = df.loc[df['ec_relation'].isin(['spouse']) & df['age_diff'].between(-17, 17, inclusive = True)]
+    spouse_conflicts = df.loc[df['ec_relation'].isin(['spouse']) & df[['pt_age', 'matched_age']].between(1, 16, inclusive = True)]
     
     # Join all the groups of conflicts that we identified
     age_conflicts = pd.DataFrame().append([child_parent_conflicts, grandchild_grandparent_conflicts, great_grandchild_grandparent_conflicts, great_great_grandchild_grandparent_conflicts, spouse_conflicts])
